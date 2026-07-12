@@ -69,6 +69,8 @@ class CourseBase(BaseORMModel):
     duration: int
     price: float
     discount: float
+    previewVideo: Optional[str] = None
+    mainVideo: Optional[str] = None
     isPublished: bool
     isPremium: bool
     isFeatured: bool

@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from .database import engine, Base, SessionLocal
 from .config import settings
-from .routers import auth, courses, progress, payments, certificates, notifications, users, favorites, quiz, lessons, categories, instructors, reviews, coupons, payment_provider, platform, enterprise
+from .routers import auth, courses, progress, payments, certificates, notifications, users, favorites, quiz, lessons, categories, instructors, reviews, coupons, payment_provider, platform, enterprise, gamification, community
 from .models import User, Course, Lesson, Quiz, QuizQuestion
 from .security import get_password_hash
 
@@ -61,6 +61,8 @@ app.include_router(coupons.router, prefix="/api")
 app.include_router(payment_provider.router, prefix="/api")
 app.include_router(platform.router, prefix="/api")
 app.include_router(enterprise.router, prefix="/api")
+app.include_router(gamification.router, prefix="/api")
+app.include_router(community.router, prefix="/api")
 
 @app.get("/")
 def home():

@@ -6,7 +6,54 @@ from ..services import get_courses, get_course_by_id
 from .auth import get_current_user
 from ..cache import get_cache, set_cache
 
+from pydantic import BaseModel
+import re
+import uuid
+
 router = APIRouter(prefix="/courses", tags=["courses"])
+
+class CourseCreate(BaseModel):
+    title: str
+    price: float = 0.0
+    category: str = "Science"
+    previewVideo: Optional[str] = None
+    mainVideo: Optional[str] = None
+
+@router.post("")
+def create_course(payload: CourseCreate, request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    if not user or user.role != "ADMIN":
+        raise HTTPException(status_code=403, detail="Admin only")
+        
+    slug = re.sub(r'[^a-z0-9]+', '-', payload.title.lower()).strip('-')
+    
+    # Check if slug exists
+    from ..models import Course
+    existing = db.query(Course).filter(Course.slug == slug).first()
+    if existing:
+        slug = f"{slug}-{uuid.uuid4().hex[:6]}"
+        
+    course = Course(
+        title=payload.title,
+        slug=slug,
+        description="A comprehensive new course on " + payload.title,
+        thumbnail="https://images.unsplash.com/photo-1462331940025-496dfbfc7564?q=80&w=2048&auto=format&fit=crop",
+        category=payload.category,
+        instructor=user.name,
+        price=payload.price,
+        previewVideo=payload.previewVideo,
+        mainVideo=payload.mainVideo,
+        isPublished=True,
+        duration=120
+    )
+    db.add(course)
+    db.commit()
+    db.refresh(course)
+    
+    # Invalidate cache
+    set_cache(f"courses:list:*", None, expire_seconds=0)
+    
+    return course
 
 
 @router.get("")

@@ -68,6 +68,8 @@ class Course(Base):
     duration = Column(Integer, nullable=False)
     price = Column(Float, default=0.0)
     discount = Column(Float, default=0.0)
+    previewVideo = Column(String, nullable=True)
+    mainVideo = Column(String, nullable=True)
 
     isPublished = Column(Boolean, default=False)
     isPremium = Column(Boolean, default=False)
@@ -727,3 +729,91 @@ class Notification(Base):
     createdAt = Column(DateTime, default=func.now())
 
     user = relationship("User", back_populates="notifications")
+
+# --- Gamification Models ---
+
+class SkillTrack(Base):
+    __tablename__ = "SkillTrack"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    icon = Column(String, nullable=True)
+    color = Column(String, nullable=True)
+
+    nodes = relationship("SkillNode", back_populates="track", cascade="all, delete-orphan")
+
+class SkillNode(Base):
+    __tablename__ = "SkillNode"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    trackId = Column(String, ForeignKey("SkillTrack.id", ondelete="CASCADE"), nullable=False)
+    title = Column(String, nullable=False)
+    type = Column(String, default="core") # foundation, core, advanced, mastery
+    requiredCourseId = Column(String, nullable=True)
+    
+    track = relationship("SkillTrack", back_populates="nodes")
+
+# --- Community Models ---
+
+class Server(Base):
+    __tablename__ = "Server"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    name = Column(String, nullable=False)
+    image = Column(String, nullable=True)
+    isGlobal = Column(Boolean, default=False)
+    courseId = Column(String, nullable=True) # If tied to a specific course
+
+    channels = relationship("Channel", back_populates="server", cascade="all, delete-orphan")
+
+class Channel(Base):
+    __tablename__ = "Channel"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    serverId = Column(String, ForeignKey("Server.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String, nullable=False)
+    type = Column(String, default="text") # text, voice
+
+    server = relationship("Server", back_populates="channels")
+    messages = relationship("Message", back_populates="channel", cascade="all, delete-orphan")
+
+class Message(Base):
+    __tablename__ = "Message"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    channelId = Column(String, ForeignKey("Channel.id", ondelete="CASCADE"), nullable=False)
+    userId = Column(String, ForeignKey("User.id", ondelete="CASCADE"), nullable=False)
+    text = Column(String, nullable=False)
+    
+    createdAt = Column(DateTime, default=func.now())
+
+    channel = relationship("Channel", back_populates="messages")
+    user = relationship("User") # Note: Add messages back_populates to User if needed
+
+# --- Enterprise B2B Models ---
+
+class EnterpriseAccount(Base):
+    __tablename__ = "EnterpriseAccount"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    companyName = Column(String, nullable=False)
+    logoUrl = Column(String, nullable=True)
+    brandColor = Column(String, nullable=True)
+    
+    createdAt = Column(DateTime, default=func.now())
+    
+    licenses = relationship("License", back_populates="enterprise", cascade="all, delete-orphan")
+
+class License(Base):
+    __tablename__ = "License"
+
+    id = Column(String, primary_key=True, default=generate_uuid)
+    enterpriseId = Column(String, ForeignKey("EnterpriseAccount.id", ondelete="CASCADE"), nullable=False)
+    assignedUserId = Column(String, ForeignKey("User.id", ondelete="SET NULL"), nullable=True)
+    isActive = Column(Boolean, default=True)
+
+    issuedAt = Column(DateTime, default=func.now())
+
+    enterprise = relationship("EnterpriseAccount", back_populates="licenses")
+    user = relationship("User")
