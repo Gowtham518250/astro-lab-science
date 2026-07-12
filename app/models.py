@@ -245,7 +245,7 @@ class ActivityLog(Base):
     action = Column(String, nullable=False)
     entityType = Column(String, nullable=True)
     entityId = Column(String, nullable=True)
-    metadata = Column(JSON, nullable=True)
+    log_metadata = Column(JSON, nullable=True)  # Renamed from metadata (reserved)
     createdAt = Column(DateTime, default=func.now())
 
     user = relationship("User", back_populates="activity_logs")
