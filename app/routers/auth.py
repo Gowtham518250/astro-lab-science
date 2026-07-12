@@ -11,10 +11,20 @@ from ..config import settings
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-def get_current_user_from_cookie(request: Request, db: Session = Depends(get_db)) -> Optional[User]:
-    token = request.cookies.get(settings.session_cookie_name)
+def get_current_user(request: Request, db: Session = Depends(get_db)) -> Optional[User]:
+    token = None
+    # 1. Try to get token from Authorization header
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+    
+    # 2. Fallback to HttpOnly cookie
+    if not token:
+        token = request.cookies.get(settings.session_cookie_name)
+        
     if not token:
         return None
+        
     payload = verify_access_token(token)
     if not payload:
         return None
@@ -37,13 +47,13 @@ def _set_auth_cookie(response: Response, token: str) -> None:
 
 @router.get("")
 def check_session(request: Request, db: Session = Depends(get_db)):
-    user = get_current_user_from_cookie(request, db)
+    user = get_current_user(request, db)
     if not user:
         return {"user": None}
     return {"user": serialize_user(user)}
 
 
-@router.post("/login")
+@router.post("/login", response_model=None)
 def login_endpoint(payload: LoginPayload, response: Response, db: Session = Depends(get_db)):
     user = authenticate_user(db, payload.email, payload.password)
     if not user:
@@ -51,10 +61,14 @@ def login_endpoint(payload: LoginPayload, response: Response, db: Session = Depe
     
     token = build_token(user)
     _set_auth_cookie(response, token)
-    return {"user": serialize_user(user)}
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": serialize_user(user)
+    }
 
 
-@router.post("/register")
+@router.post("/register", response_model=None)
 def register_endpoint(payload: RegisterPayload, response: Response, db: Session = Depends(get_db)):
     if get_user_by_email(db, payload.email):
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -63,7 +77,11 @@ def register_endpoint(payload: RegisterPayload, response: Response, db: Session 
     user = create_user(db, name=payload.name, email=payload.email, password=payload.password, role=payload.role.upper() if payload.role else "USER")
     token = build_token(user)
     _set_auth_cookie(response, token)
-    return {"user": serialize_user(user)}
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": serialize_user(user)
+    }
 
 
 @router.post("/logout")
@@ -83,7 +101,11 @@ def auth_action_legacy(payload: UserLogin, response: Response, request: Request,
             raise HTTPException(status_code=401, detail="Invalid email or password")
         token = build_token(user)
         _set_auth_cookie(response, token)
-        return {"user": serialize_user(user)}
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "user": serialize_user(user)
+        }
 
     elif payload.action == "register":
         if not payload.email or not payload.password or not payload.name:
@@ -94,7 +116,11 @@ def auth_action_legacy(payload: UserLogin, response: Response, request: Request,
         user = create_user(db, name=payload.name, email=payload.email, password=payload.password, role=role_to_use)
         token = build_token(user)
         _set_auth_cookie(response, token)
-        return {"user": serialize_user(user)}
+        return {
+            "access_token": token,
+            "token_type": "bearer",
+            "user": serialize_user(user)
+        }
 
     elif payload.action == "logout":
         response.delete_cookie(key=settings.session_cookie_name, path="/")

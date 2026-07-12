@@ -41,6 +41,11 @@ class AuthUserResponse(UserBase):
     createdAt: datetime
     updatedAt: datetime
 
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: AuthUserResponse
+
 # Lesson schemas
 class LessonBase(BaseORMModel):
     id: str
