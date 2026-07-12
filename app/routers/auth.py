@@ -34,6 +34,10 @@ def get_current_user(request: Request, db: Session = Depends(get_db)) -> Optiona
     return db.query(User).filter(User.id == user_id).first()
 
 
+def get_current_user_from_cookie(request: Request, db: Session = Depends(get_db)) -> Optional[User]:
+    return get_current_user(request, db)
+
+
 def _set_auth_cookie(response: Response, token: str) -> None:
     response.set_cookie(
         key=settings.session_cookie_name,
