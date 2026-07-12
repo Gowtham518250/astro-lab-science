@@ -776,10 +776,10 @@ class Channel(Base):
     type = Column(String, default="text") # text, voice
 
     server = relationship("Server", back_populates="channels")
-    messages = relationship("Message", back_populates="channel", cascade="all, delete-orphan")
+    messages = relationship("ChannelMessage", back_populates="channel", cascade="all, delete-orphan")
 
-class Message(Base):
-    __tablename__ = "Message"
+class ChannelMessage(Base):
+    __tablename__ = "ChannelMessage"
 
     id = Column(String, primary_key=True, default=generate_uuid)
     channelId = Column(String, ForeignKey("Channel.id", ondelete="CASCADE"), nullable=False)

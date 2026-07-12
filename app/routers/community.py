@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 from ..database import get_db
-from ..models import User, Server, Channel, Message
+from ..models import User, Server, Channel, ChannelMessage
 from ..security import get_current_user
 
 router = APIRouter(tags=["Community"])
@@ -34,7 +34,7 @@ def get_community_servers(db: Session = Depends(get_db), current_user: User = De
 
 @router.get("/community/channels/{channel_id}/messages", response_model=Dict[str, Any])
 def get_channel_messages(channel_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    messages = db.query(Message).filter(Message.channelId == channel_id).order_by(Message.createdAt.asc()).limit(50).all()
+    messages = db.query(ChannelMessage).filter(ChannelMessage.channelId == channel_id).order_by(ChannelMessage.createdAt.asc()).limit(50).all()
     
     msg_data = []
     for m in messages:
