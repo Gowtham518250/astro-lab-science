@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from .database import engine, Base, SessionLocal
+from sqlalchemy import text
 from .config import settings
 from .routers import auth, courses, progress, payments, certificates, notifications, users, favorites, quiz, lessons, categories, instructors, reviews, coupons, payment_provider, platform, enterprise, gamification, community
 from .models import User, Course, Lesson, Quiz, QuizQuestion
@@ -78,6 +79,16 @@ def seed_database():
     print("Starting up...")
     db = SessionLocal()
     try:
+        # Check and add missing columns if they don't exist
+        try:
+            db.execute(text("ALTER TABLE \"Course\" ADD COLUMN IF NOT EXISTS \"previewVideo\" VARCHAR"))
+            db.execute(text("ALTER TABLE \"Course\" ADD COLUMN IF NOT EXISTS \"mainVideo\" VARCHAR"))
+            db.commit()
+            print("Successfully checked/added missing columns to Course table")
+        except Exception as e:
+            db.rollback()
+            print(f"Schema migration error: {e}")
+
         # Check if users already exist
         user_count = db.query(User).count()
         print(f"User count in DB: {user_count}")
