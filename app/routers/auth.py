@@ -75,6 +75,14 @@ def register_endpoint(payload: RegisterPayload, response: Response, db: Session 
     
     # Allows role to be specified (e.g. USER, CUSTOMER, STUDENT)
     user = create_user(db, name=payload.name, email=payload.email, password=payload.password, role=payload.role.upper() if payload.role else "USER")
+    
+    # Trigger background task
+    try:
+        import worker
+        worker.send_welcome_email_task.delay(user.email, user.name)
+    except Exception as e:
+        print(f"Failed to queue welcome email: {e}")
+
     token = build_token(user)
     _set_auth_cookie(response, token)
     return {
@@ -114,6 +122,13 @@ def auth_action_legacy(payload: UserLogin, response: Response, request: Request,
             raise HTTPException(status_code=400, detail="Email already registered")
         role_to_use = payload.role.upper() if getattr(payload, "role", None) else "STUDENT"
         user = create_user(db, name=payload.name, email=payload.email, password=payload.password, role=role_to_use)
+        
+        try:
+            import worker
+            worker.send_welcome_email_task.delay(user.email, user.name)
+        except Exception as e:
+            print(f"Failed to queue welcome email: {e}")
+
         token = build_token(user)
         _set_auth_cookie(response, token)
         return {
